@@ -12,7 +12,7 @@ def client():
     return TestClient(app)
 
 
-@pytest.fixture()
+@pytest.fixture(scope='session')
 def db():
     engine = create_engine('sqlite:///:memory:')
 
