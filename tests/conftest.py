@@ -7,6 +7,7 @@ from sqlalchemy.pool import StaticPool
 from fastapi_todo.app import app
 from fastapi_todo.database import get_session
 from fastapi_todo.models import User, table_registry
+from fastapi_todo.security import get_password_hash
 
 
 @pytest.fixture()
@@ -36,11 +37,22 @@ def session():
 
 @pytest.fixture()
 def user(session):
+    password = 'Testpassword123'
     user = User(
         username='TestJohnDoe',
-        password='Testpassword123',
+        password=get_password_hash(password),
         email='Testjohn@doe.com',
     )
     session.add(user)
     session.commit()
+    user.plain_password = password  # Monkey Patch
     return user
+
+
+@pytest.fixture()
+def access_token(client, user):
+    response = client.post(
+        '/token',
+        data={'username': user.username, 'password': user.plain_password},
+    )
+    return response.json()['access_token']
