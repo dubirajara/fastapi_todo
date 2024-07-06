@@ -53,7 +53,7 @@ def test_update_user(client, user, access_token):
 
 
 def test_get_user(client, user):
-    response = client.get('/users/1')
+    response = client.get(f'/users/{user.id}')
     assert response.json() == {
         'email': 'Testjohn@doe.com',
         'id': 1,
@@ -65,21 +65,11 @@ def test_get_user(client, user):
 
 def test_delete_user(client, user, access_token):
     response = client.delete(
-        '/users/1', headers={'Authorization': f'Bearer {access_token}'}
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {access_token}'},
     )
     assert response.json() == {'message': 'User deleted'}
     assert response.status_code == HTTPStatus.OK
-
-
-def test_get_token(client, user):
-    response = client.post(
-        '/token',
-        data={'username': user.username, 'password': user.plain_password},
-    )
-    token = response.json()
-    assert response.status_code == HTTPStatus.OK
-    assert token['access_token']
-    assert token['token_type'] == 'Bearer'
 
 
 # Failure test cases
@@ -114,7 +104,7 @@ def test_update_user_not_own(client, user, access_token):
         'password': '42',
     }
     response = client.put(
-        '/users/2',
+        f'/users/{user.id + 1}',
         json=payload,
         headers={'Authorization': f'Bearer {access_token}'},
     )
@@ -122,14 +112,14 @@ def test_update_user_not_own(client, user, access_token):
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
-def test_update_user_invalid_token(client):
+def test_update_user_invalid_token(client, user):
     payload = {
         'username': 'testuser',
         'email': 'testuser@mail.com',
         'password': '42',
     }
     response = client.put(
-        '/users/1',
+        f'/users/{user.id}',
         json=payload,
         headers={'Authorization': 'Bearer testtoken'},
     )
@@ -144,7 +134,7 @@ def test_update_user_not_authenticated(client, user):
         'password': '42',
     }
     response = client.put(
-        '/users/2',
+        f'/users/{user.id + 1}',
         json=payload,
     )
     assert response.json() == {'detail': 'Not authenticated'}
@@ -152,30 +142,34 @@ def test_update_user_not_authenticated(client, user):
 
 
 def test_get_user_not_found(client, user):
-    response = client.get('/users/2')
+    response = client.get(f'/users/{user.id + 1}')
     assert response.json() == {'detail': 'User not found'}
     assert response.status_code == HTTPStatus.NOT_FOUND
 
 
 def test_delete_user_not_own(client, user, access_token):
     response = client.delete(
-        '/users/2', headers={'Authorization': f'Bearer {access_token}'}
+        f'/users/{user.id + 1}',
+        headers={'Authorization': f'Bearer {access_token}'},
     )
     assert response.json() == {'detail': 'You can only delete your own user'}
     assert response.status_code == HTTPStatus.FORBIDDEN
 
 
 def test_delete_user_not_authenticated(client, user):
-    response = client.delete('/users/2')
+    response = client.delete(f'/users/{user.id + 1}')
     assert response.json() == {'detail': 'Not authenticated'}
     assert response.status_code == HTTPStatus.UNAUTHORIZED
 
 
-def test_get_token_invalid_credentials(client, user):
-    response = client.post(
-        '/token',
-        data={'username': user.username, 'password': '42'},
+def test_invalid_token_user_not_exists(client, user, access_token):
+    client.delete(
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {access_token}'},
     )
-
-    assert response.json() == {'detail': 'Incorrect username or password'}
-    assert response.status_code == HTTPStatus.BAD_REQUEST
+    response = client.delete(
+        f'/users/{user.id}',
+        headers={'Authorization': f'Bearer {access_token}'},
+    )
+    assert response.json() == {'detail': 'Invalid credentials'}
+    assert response.status_code == HTTPStatus.UNAUTHORIZED

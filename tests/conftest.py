@@ -52,7 +52,7 @@ def user(session):
 @pytest.fixture()
 def access_token(client, user):
     response = client.post(
-        '/token',
+        '/auth/token',
         data={'username': user.username, 'password': user.plain_password},
     )
     return response.json()['access_token']

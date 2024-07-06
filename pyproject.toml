@@ -46,11 +46,11 @@ quote-style = "single"
 
 [tool.taskipy.tasks]
 run = "fastapi dev fastapi_todo/app.py"
+pre_test = "task lint"
+test = "pytest --cov=fastapi_todo -vv"
+post_test = "coverage html"
 lint = "ruff check . && ruff check . --diff"
 format = "ruff check . --fix && ruff format ."
-pre_test = "task lint"
-test = "pytest -s -x --cov=fastapi_todo -vv"
-post_test = "coverage html"
 
 [build-system]
 requires = ["poetry-core"]
