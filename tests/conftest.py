@@ -1,3 +1,4 @@
+import factory
 import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
@@ -8,6 +9,24 @@ from fastapi_todo.app import app
 from fastapi_todo.database import get_session
 from fastapi_todo.models import User, table_registry
 from fastapi_todo.security import get_password_hash
+
+
+class UserFactory(factory.Factory):
+    class Meta:
+        model = User
+
+    username = factory.Sequence(lambda n: f'test{n}')
+    email = factory.LazyAttribute(lambda obj: f'{obj.username}@test.com')
+
+
+def persist_user(session, password):
+    user = UserFactory(
+        password=get_password_hash(password),
+    )
+    session.add(user)
+    session.commit()
+    user.plain_password = password  # Monkey Patch
+    return user
 
 
 @pytest.fixture()
@@ -37,16 +56,12 @@ def session():
 
 @pytest.fixture()
 def user(session):
-    password = 'Testpassword123'
-    user = User(
-        username='TestJohnDoe',
-        password=get_password_hash(password),
-        email='Testjohn@doe.com',
-    )
-    session.add(user)
-    session.commit()
-    user.plain_password = password  # Monkey Patch
-    return user
+    return persist_user(session, 'Testpassword123')
+
+
+@pytest.fixture()
+def other_user(session):
+    return persist_user(session, 'Testpassword123')
 
 
 @pytest.fixture()

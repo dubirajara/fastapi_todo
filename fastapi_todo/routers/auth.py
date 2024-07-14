@@ -12,6 +12,7 @@ from fastapi_todo.models import User
 from fastapi_todo.schemas import Token
 from fastapi_todo.security import (
     create_access_token,
+    get_current_user,
     verify_password,
 )
 
@@ -19,6 +20,7 @@ router = APIRouter(prefix='/auth', tags=['auth'])
 
 T_Session = Annotated[Session, Depends(get_session)]
 T_OauthForm = Annotated[OAuth2PasswordRequestForm, Depends()]
+T_CurrentUser = Annotated[User, Depends(get_current_user)]
 
 
 @router.post('/token', response_model=Token)
@@ -33,3 +35,9 @@ def login_for_access_token(session: T_Session, form_data: T_OauthForm):
         )
     access_token = create_access_token(data={'sub': user.username})
     return {'access_token': access_token, 'token_type': 'Bearer'}
+
+
+@router.post('/refresh_token', response_model=Token)
+def refresh_access_token(user: T_CurrentUser):
+    new_access_token = create_access_token(data={'sub': user.username})
+    return {'access_token': new_access_token, 'token_type': 'Bearer'}
